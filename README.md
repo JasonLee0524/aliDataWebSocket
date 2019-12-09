@@ -1,0 +1,2 @@
+# aliDataWebSocket
+跨平台的websocket通信，支持阿里云的物模型数据格式的消息通讯
