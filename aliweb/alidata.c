@@ -16,7 +16,7 @@
 #define CONN_PROTOCOL           "alibaba-iot-linkedge-protocol"
 #define PROTOCOL_VERSION        "1.0"
 
-
+common_func g_globewebModule = { 0 };
 UT_LIST_HEAD(g_ws_msg_reply_list);
 //pthread_mutex_t g_ws_msg_reply_lock; //线程锁
 void* g_ws_msg_reply_lock = NULL;
@@ -184,7 +184,7 @@ int json_data_to_struct_data(cJSON *json_data, leda_device_data_t **struct_data,
     }
 
     *data_cnt = size;
-    data = utc_malloc(sizeof(leda_device_data_t) * size);
+    data = g_globewebModule.utc_malloc(sizeof(leda_device_data_t) * size);
     if (NULL == data)
     {
         log_w(LOG_TAG, "no memory can allocate\n");
@@ -202,7 +202,7 @@ int json_data_to_struct_data(cJSON *json_data, leda_device_data_t **struct_data,
         sub_item = cJSON_GetObjectItem(item, "identifier");
         if (NULL == sub_item)
         {
-            utc_free(data);
+            g_globewebModule.utc_free(data);
             return LE_ERROR_INVAILD_PARAM;
         }
         snprintf(data[i].key, MAX_PARAM_NAME_LENGTH, "%s", sub_item->valuestring);
@@ -210,7 +210,7 @@ int json_data_to_struct_data(cJSON *json_data, leda_device_data_t **struct_data,
         sub_item = cJSON_GetObjectItem(item, "type");
         if (NULL == sub_item || sub_item->type != cJSON_String)
         {
-            utc_free(data);
+             g_globewebModule.utc_free(data);
             return LE_ERROR_INVAILD_PARAM;
         }
         data[i].type = type_string_to_number(sub_item->valuestring);
@@ -218,7 +218,7 @@ int json_data_to_struct_data(cJSON *json_data, leda_device_data_t **struct_data,
         sub_item = cJSON_GetObjectItem(item, "value");
         if (NULL == sub_item)
         {
-            utc_free(data);
+             g_globewebModule.utc_free(data);
             return LE_ERROR_INVAILD_PARAM;
         }
 
@@ -243,7 +243,7 @@ int json_data_to_struct_data(cJSON *json_data, leda_device_data_t **struct_data,
             if (!buff)
             {
                 log_w(LOG_TAG, "no memory can allocate\n");
-                utc_free(data);
+                 g_globewebModule.utc_free(data);
                 return LE_ERROR_ALLOCATING_MEM;
             }
             snprintf(data[i].value, MAX_PARAM_VALUE_LENGTH, "%s", buff);
@@ -264,12 +264,12 @@ int json_data_to_struct_data(cJSON *json_data, leda_device_data_t **struct_data,
 static unsigned int _ws_get_msg_id()
 {
     if(g_msg_locker == NULL){
-       g_msg_locker = utc_mutex_create();
+       g_msg_locker = g_globewebModule.utc_mutex_new();
     }
-    utc_mutex_lock(g_msg_locker);
+    g_globewebModule.utc_mutex_lock(g_msg_locker);
     
     ++g_msg_id;
-    utc_mutex_unlock(g_msg_locker);
+    g_globewebModule.utc_mutex_unlock(g_msg_locker);
 
     return g_msg_id;
 }
@@ -281,9 +281,9 @@ static ws_msg_reply_t *_ws_get_reply_by_msg_id(int msg_id)
     ws_msg_reply_t *reply   = NULL;
 
     if(g_ws_msg_reply_lock == NULL){
-       g_ws_msg_reply_lock = utc_mutex_create();
+       g_ws_msg_reply_lock = g_globewebModule.utc_mutex_new();
     }
-    utc_mutex_lock(g_ws_msg_reply_lock);
+      g_globewebModule.utc_mutex_lock(g_ws_msg_reply_lock);
     ut_list_for_each_entry_safe(pos, next, &g_ws_msg_reply_list, list_node)
     {
         if (pos->msg_id == msg_id)
@@ -292,7 +292,7 @@ static ws_msg_reply_t *_ws_get_reply_by_msg_id(int msg_id)
             break;
         }
     }
-    utc_mutex_unlock(g_ws_msg_reply_lock);
+    g_globewebModule.utc_mutex_unlock(g_ws_msg_reply_lock);
 
     return reply;
 }
@@ -301,23 +301,25 @@ static ws_msg_reply_t *_ws_get_reply_by_msg_id(int msg_id)
 static int _ws_insert_reply(int msg_id)
 {
     ws_msg_reply_t *reply = NULL;
-
-    utc_mutex_lock(g_ws_msg_reply_lock);
-    reply = (ws_msg_reply_t *)utc_malloc(sizeof(ws_msg_reply_t));
+      if(g_ws_msg_reply_lock == NULL){
+       g_ws_msg_reply_lock = g_globewebModule.utc_mutex_new();
+    }
+      g_globewebModule.utc_mutex_lock(g_ws_msg_reply_lock);
+    reply = (ws_msg_reply_t *) g_globewebModule.utc_malloc(sizeof(ws_msg_reply_t));
     if (NULL == reply)
     {
         log_w(LOG_TAG, "no memory can allocate\n");
-        utc_mutex_unlock(g_ws_msg_reply_lock);
+        g_globewebModule.utc_mutex_unlock(g_ws_msg_reply_lock);
         return LE_ERROR_ALLOCATING_MEM;
     }
 
     memset(reply, 0, sizeof(ws_msg_reply_t));
-    reply->sem =utc_semaphore_create();
+    reply->sem =g_globewebModule.utc_semaphore_new();
     if (reply->sem == NULL)
     {
-        utc_free(reply);
+         g_globewebModule.utc_free(reply);
         log_w(LOG_TAG, "semphore init failed\n");
-        utc_mutex_unlock(g_ws_msg_reply_lock);
+        g_globewebModule.utc_mutex_unlock(g_ws_msg_reply_lock);
         return LE_ERROR_UNKNOWN;
     }
 
@@ -325,7 +327,7 @@ static int _ws_insert_reply(int msg_id)
     reply->code = LE_ERROR_UNKNOWN;
 
     ut_list_add(&reply->list_node, &g_ws_msg_reply_list);
-    utc_mutex_unlock(g_ws_msg_reply_lock);
+    g_globewebModule.utc_mutex_unlock(g_ws_msg_reply_lock);
 
     return LE_SUCCESS;
 }
@@ -340,17 +342,19 @@ static void _ws_remove_reply(int msg_id)
         log_w(LOG_TAG, "It's no exist that msg id %d in request msg list\n", msg_id);
         return;
     }
-
-    utc_mutex_lock(g_ws_msg_reply_lock);
+  if(g_ws_msg_reply_lock == NULL){
+       g_ws_msg_reply_lock = g_globewebModule.utc_mutex_new();
+    }
+      g_globewebModule.utc_mutex_lock(g_ws_msg_reply_lock);
     if (NULL != reply->payload)
     {
-        utc_free(reply->payload);
+         g_globewebModule.utc_free(reply->payload);
         reply->payload = NULL;
     }
-    utc_semaphore_destroy(reply->sem);
+    g_globewebModule.utc_semaphore_free(reply->sem);
     ut_list_del(&reply->list_node);
-    utc_free(reply);
-    utc_mutex_unlock(g_ws_msg_reply_lock);
+     g_globewebModule.utc_free(reply);
+    g_globewebModule.utc_mutex_unlock(g_ws_msg_reply_lock);
     return;
 }
 
@@ -363,16 +367,19 @@ static int _ws_set_reply_result(int msg_id, int code, char *payload)
     {
         return LE_ERROR_UNKNOWN;
     }
-    utc_mutex_lock(g_ws_msg_reply_lock);
+      if(g_ws_msg_reply_lock == NULL){
+       g_ws_msg_reply_lock = g_globewebModule.utc_mutex_new();
+    }
+      g_globewebModule.utc_mutex_lock(g_ws_msg_reply_lock);
     reply->code = code;
     if (NULL != payload)
     {
-        reply->payload = utc_malloc(strlen(payload));
+        reply->payload = g_globewebModule.utc_malloc(strlen(payload));
         memcpy(reply->payload,payload,strlen(payload));
     }
-    utc_mutex_unlock(g_ws_msg_reply_lock);
+    g_globewebModule.utc_mutex_unlock(g_ws_msg_reply_lock);
 
-    utc_semaphore_post(reply->sem);
+      g_globewebModule.utc_semaphore_post(reply->sem);
 
     return LE_SUCCESS;
 }
@@ -389,7 +396,7 @@ static int _ws_get_reply_result(int msg_id, int timeout_ms, int *code, char **pa
         return LE_ERROR_INVAILD_PARAM;
     }
 
-    ret = utc_semaphore_wait(reply->sem, 30);
+    ret = g_globewebModule.utc_semaphore_wait(reply->sem, timeout_ms);
     if (-1 == ret)
     {
         _ws_remove_reply(msg_id);
@@ -462,11 +469,11 @@ int leda_rsp_get_properties(char *pk, char *dn, int msg_id, leda_device_data_t *
 {
     int     ret         = LE_ERROR_UNKNOWN;
 
-    cJSON   *root       = NULL;
+  //  cJSON   *root       = NULL;
     cJSON   *payload    = NULL;
     cJSON   *properties = NULL;
 
-    char    *msg        = NULL;
+    //char    *msg        = NULL;
 
     payload = cJSON_CreateObject();
     if (NULL == payload)
@@ -518,7 +525,7 @@ int leda_rsp_call_service(char *pk, char *dn, int msg_id, const char *service_na
 
     leda_device_data_t *output_params = NULL;
 
-    output_params = utc_malloc(sizeof(leda_device_data_t) * g_devs_cb.service_output_max_count);
+    output_params = g_globewebModule.utc_malloc(sizeof(leda_device_data_t) * g_devs_cb.service_output_max_count);
     if (!output_params)
     {
         log_w(LOG_TAG, "no memory can allocate\n");
@@ -566,7 +573,7 @@ end:
 
     if (NULL != output_params)
     {
-        utc_free(output_params);
+         g_globewebModule.utc_free(output_params);
     }
 
     return leda_send_rsp(ret, msg_id, payload);
@@ -666,12 +673,12 @@ end:
             cJSON_Delete(parsed_msg->payload);
         }
 
-        utc_free(parsed_msg);
+         g_globewebModule.utc_free(parsed_msg);
     }
 
     if (NULL != data)
     {
-        utc_free(data);
+         g_globewebModule.utc_free(data);
     }
     return;
 }
@@ -733,7 +740,7 @@ static void cb_ws_recv(const char *msg, size_t len, void *user)
         return;
     }
 
-    parsed_msg = utc_malloc(sizeof(parsed_msg_t));
+    parsed_msg = g_globewebModule.utc_malloc(sizeof(parsed_msg_t));
     if (NULL == parsed_msg)
     {
         cJSON_Delete(root);
@@ -754,7 +761,7 @@ static void cb_ws_recv(const char *msg, size_t len, void *user)
         if (NULL == parsed_msg->payload)
         {
             log_w(LOG_TAG, "no memory can allocate\n");
-            utc_free(parsed_msg);
+             g_globewebModule.utc_free(parsed_msg);
             cJSON_Delete(root);
             return;
         }
@@ -1053,13 +1060,13 @@ int leda_report_properties(const char *product_key, const char *device_name, con
 int webinit(const leda_conn_info_t *info){
     int fd = -1;
 
-    fd = web_socket_client_link_to_server(info->server_ip,info->server_port, "/null");
+    fd = web_socket_client_link_to_server((char*)info->server_ip,info->server_port, "/null");
     if(fd < 0)
     {
         log_w(LOG_TAG,"client link to server failed !\r\n");
         return fd;
     }
-    utc_sleepms(1000);
+    g_globewebModule.utc_sleepms(1000);
     return fd;
 }
 
@@ -1083,11 +1090,14 @@ static void *webpthread(void *user_data){
             recvcount++;
              log_w(LOG_TAG,"web_socket_recv fail: %d\r\n",recvcount);
         }
-         utc_sleepms(10);
+          g_globewebModule.utc_sleepms(10);
         if(recvcount >= (timeoutMs/10)){
             break;
         }
     }
+    //通知关闭连接
+    g_conn_state = LEDA_WS_DISCONNECTED;
+       g_globewebModule.utc_thread_delete(g_pthreadhandle);
     return NULL;
 }
 /*
@@ -1159,7 +1169,9 @@ int leda_init(const leda_conn_info_t *info){
     // thread_parms.name = "websocket"; 
     // ret = HAL_ThreadCreate(&g_pthreadhandle,webpthread,NULL, &thread_parms,NULL);
     int s = info->timeout;
-     utc_thread_create(&g_pthreadhandle,webpthread,&s);
+     log_i(LOG_TAG, "webpthread\n");
+     g_globewebModule.utc_thread_create(&g_pthreadhandle,webpthread,&s);
+       log_i(LOG_TAG, "webpthread ok\n");
     return ret;
 }
 
@@ -1171,10 +1183,6 @@ int leda_init(const leda_conn_info_t *info){
  * 阻塞接口.
  */
 void leda_exit(void){
-
-    utc_thread_delete(g_pthreadhandle);
-    //未连接
-    close(g_fd);
    
     cb_ws_close(g_conn_cb.usr_data);
 
@@ -1182,7 +1190,50 @@ void leda_exit(void){
     g_conn_state    = -1;
     g_msg_id        = 0;
 
+     //未连接
+    close(g_fd);
     log_w(LOG_TAG, "leda exit...\n");
-
     return;
+}
+
+
+int get_con_status(){
+    return  g_conn_state;
+}
+
+
+
+//注册系统回调接口
+ char register_init(common_func model){
+     char ret = 0;
+    if (model.utc_free != NULL && model.utc_malloc != NULL && model.utc_mutex_free != NULL && model.utc_mutex_lock != NULL
+		&& model.utc_mutex_new != NULL && model.utc_mutex_unlock != NULL && model.utc_random != NULL && model.utc_semaphore_free != NULL
+		&& model.utc_semaphore_new != NULL && model.utc_semaphore_post != NULL && model.utc_semaphore_wait != NULL && model.utc_sleepms != NULL
+        && model.utc_thread_create != NULL && model.utc_thread_delete != NULL && model.utc_uptimems != NULL){
+
+        g_globewebModule.utc_free = model.utc_free;
+		g_globewebModule.utc_malloc = model.utc_malloc;
+		g_globewebModule.utc_mutex_free = model.utc_mutex_free;
+		g_globewebModule.utc_mutex_lock = model.utc_mutex_lock;
+		g_globewebModule.utc_mutex_new = model.utc_mutex_new;
+		g_globewebModule.utc_mutex_unlock = model.utc_mutex_unlock;
+		g_globewebModule.utc_random = model.utc_random;
+		g_globewebModule.utc_semaphore_free = model.utc_semaphore_free;
+		g_globewebModule.utc_semaphore_new = model.utc_semaphore_new;
+		g_globewebModule.utc_semaphore_post = model.utc_semaphore_post;
+		g_globewebModule.utc_semaphore_wait = model.utc_semaphore_wait;
+		g_globewebModule.utc_sleepms = model.utc_sleepms;
+         g_globewebModule.utc_thread_create = model.utc_thread_create;
+		g_globewebModule.utc_thread_delete = model.utc_thread_delete;
+        g_globewebModule.utc_uptimems = model.utc_uptimems;
+        ret = 1;
+    }
+    else{
+        printf("register_init error\r\n");
+    }
+    return ret;
+}
+//版本号
+ char* get_version(){
+     return "v1.0";
 }

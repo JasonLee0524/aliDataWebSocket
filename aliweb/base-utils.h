@@ -1,10 +1,7 @@
 #ifndef __BASE_UTILS_H__
 #define __BASE_UTILS_H__
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdint.h>
+#include "aliwebdll.h"
 
 #if defined(__cplusplus) /* If this is a C++ compiler, use C linkage */
 extern "C" {

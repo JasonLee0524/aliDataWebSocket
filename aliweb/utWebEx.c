@@ -1,5 +1,5 @@
 #include "utWebEx.h"
-
+extern common_func g_globewebModule;
 //================================================== 加密方法 sha1哈希 ==================================================
  
 typedef struct SHA1Context{  
@@ -190,7 +190,7 @@ char * sha1_hash(const char *source){   // Main
     } 
     else 
     {  
-        buf = (char *)utc_malloc(128);  
+        buf = (char *)g_globewebModule.utc_malloc(128);  
         memset(buf, 0, 128);  
         sprintf(buf, "%08X%08X%08X%08X%08X", sha.Message_Digest[0],sha.Message_Digest[1],  
         sha.Message_Digest[2],sha.Message_Digest[3],sha.Message_Digest[4]);  
@@ -360,7 +360,7 @@ void web_socket_get_random_string(unsigned char *buf, unsigned int len)
     srand((int)time(0));
     for(i = 0; i < len; i++)
     {
-       temp = (unsigned char) utc_random(256);
+       temp = (unsigned char)g_globewebModule.utc_random(256);
        // temp = (unsigned char)(rand()%256);
         if(temp == 0)   // 随机数不要0, 0 会干扰对字符串长度的判断
             temp = 128;
@@ -417,9 +417,9 @@ int web_socket_build_respond_shake_key(unsigned char *acceptKey, unsigned int ac
         sha1Data[ i / 2 ] = htoi(sha1DataTemp, i, 2);      
     n = ut_base64_encode((const unsigned char *)sha1Data, (char *)respondKey, (n / 2));
     //
-    utc_free(sha1DataTemp);
-    utc_free(sha1Data);
-    utc_free(clientKey);
+     g_globewebModule.utc_free(sha1DataTemp);
+     g_globewebModule.utc_free(sha1Data);
+     g_globewebModule.utc_free(clientKey);
     return n;
 }
 /*******************************************************************************
@@ -811,7 +811,9 @@ int web_socket_client_link_to_server(char *ip, int port, char *interface_path)
     web_socket_build_http_head(ip, port, interface_path, shakeKey, (char *)loginBuf);   
     // 发出协议包
     ret = send(fd , loginBuf , strlen((const char*)loginBuf) , 0);
-    //printf("ret send = %d,fd = %d\r\n",ret,fd);
+    if(ret <0){
+            printf("ret send = %d,fd = %d\r\n",ret,fd);
+    }
     return fd;
 }
 /*******************************************************************************
@@ -869,7 +871,7 @@ int web_socket_send(int fd, unsigned char *data, unsigned int dataLen, char mod,
    // for(i = 0; i < retLen; i ++)  printf("%.2X ", webSocketPackage[i]);
    // printf("\r\n");
     ret = send(fd, webSocketPackage, retLen, 0);
-    utc_free(webSocketPackage);
+     g_globewebModule.utc_free(webSocketPackage);
     return ret;
 }
 /*******************************************************************************
@@ -886,7 +888,7 @@ int web_socket_recv(int fd, unsigned char *data, unsigned int dataMaxLen)
     unsigned char *webSocketPackage, *recvBuf;
     int ret, ret2 = 0;
     unsigned int retLen = 0;
-    recvBuf =   (unsigned char *)utc_malloc(sizeof(char)*dataMaxLen);
+    recvBuf =   (unsigned char *)g_globewebModule.utc_malloc(sizeof(char)*dataMaxLen);
      memset(recvBuf, 0, dataMaxLen);
 
     ret = recv(fd, recvBuf, dataMaxLen, 0);
@@ -897,7 +899,7 @@ int web_socket_recv(int fd, unsigned char *data, unsigned int dataMaxLen)
         if(strncmp((const char*)recvBuf, "GET", 3) == 0)
         {
             ret2 = web_socket_server_link_to_client(fd, (char*)recvBuf, ret);
-            utc_free(recvBuf);
+             g_globewebModule.utc_free(recvBuf);
             if(ret2 < 0)
             {
                 memset(data, 0, dataMaxLen);
@@ -911,7 +913,7 @@ int web_socket_recv(int fd, unsigned char *data, unsigned int dataMaxLen)
  
         //------------------------------------------------------------------- 正常数据交换
         //---------- websocket数据打包 ----------
-        webSocketPackage =  (unsigned char *)utc_malloc(sizeof(char)*(ret + 128));
+        webSocketPackage =  (unsigned char *)g_globewebModule.utc_malloc(sizeof(char)*(ret + 128));
         //(unsigned char *)calloc(1, sizeof(char)*(ret + 128));  
         memset(webSocketPackage, 0, (ret + 128));
         ret2 = web_socket_depackage(recvBuf, ret, webSocketPackage, (ret + 128), &retLen);
@@ -920,8 +922,8 @@ int web_socket_recv(int fd, unsigned char *data, unsigned int dataMaxLen)
             web_socket_send(fd, webSocketPackage, retLen, 1, WCT_PONG);
             // 显示数据
            // printf("web_socket_recv : PING %d\r\n%s\r\n" , retLen, webSocketPackage); 
-            utc_free(recvBuf);
-            utc_free(webSocketPackage);
+             g_globewebModule.utc_free(recvBuf);
+             g_globewebModule.utc_free(webSocketPackage);
             return WCT_PING;
         }
          if (ret2 == WCT_TXTDATA || ret2 == WCT_BINDATA || ret2 == WCT_MINDATA) // 解析为数据包
@@ -938,22 +940,22 @@ int web_socket_recv(int fd, unsigned char *data, unsigned int dataMaxLen)
                 printf("web_socket_recv : New Package BinFile ret2:%d/retLen:%d\r\n" , ret2, retLen); 
                 for(i = 0; i < retLen; i++) printf("%.2X ", webSocketPackage[i]); printf("\r\n");
             }*/
-            utc_free(recvBuf);
-            utc_free(webSocketPackage);
+             g_globewebModule.utc_free(recvBuf);
+             g_globewebModule.utc_free(webSocketPackage);
             return retLen;
         }
-       utc_free(recvBuf);
-        utc_free(webSocketPackage);
+        g_globewebModule.utc_free(recvBuf);
+         g_globewebModule.utc_free(webSocketPackage);
         return -ret;
     }
     else
     {
-       utc_free(recvBuf);
+        g_globewebModule.utc_free(recvBuf);
         return ret;
     }
 }
  
 void delayms(unsigned int ms)
 {
-    utc_sleepms(ms);
+    g_globewebModule.utc_sleepms(ms);
 }

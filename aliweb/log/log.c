@@ -28,7 +28,7 @@ static char *get_timestamp(char *buf, int len, time_t cur_time)
     return buf;
 }
 
-void set_log_level(int lvl)
+void set_log_level(LOG_LEVEL lvl)
 {
     if (lvl < LOG_LEVEL_DEBUG || lvl >= LOG_LEVEL_NONE) {
         g_log_lvl = LOG_LEVEL_ERR;

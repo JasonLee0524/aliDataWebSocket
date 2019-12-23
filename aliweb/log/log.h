@@ -1,22 +1,11 @@
 #ifndef __LOG_H__
 #define __LOG_H__
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdint.h>
-
+#include "aliwebdll.h"
 #if defined(__cplusplus) /* If this is a C++ compiler, use C linkage */
 extern "C" {
 #endif
 
-typedef enum {
-    LOG_LEVEL_DEBUG = 0,
-    LOG_LEVEL_INFO,
-    LOG_LEVEL_WARN,
-    LOG_LEVEL_ERR,
-    LOG_LEVEL_NONE,
-} LOG_LEVEL;
 
 typedef const char cchar;
 
@@ -29,7 +18,7 @@ typedef const char cchar;
 #define COL_CYN "\x1B[36m"
 #define COL_MAG "\x1B[35m"
 
-void set_log_level(int lvl);
+void set_log_level(LOG_LEVEL lvl);
 
 void log_print(LOG_LEVEL lvl, cchar *color, cchar *t, cchar *f, cchar *func, int l, cchar *fmt, ...);
 

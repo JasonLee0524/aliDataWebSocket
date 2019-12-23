@@ -1,9 +1,14 @@
 COMPONENT_ADD_INCLUDEDIRS += ./ \
 					log \
-					os
+					os\
+					include
 COMPONENT_SOURCES += ./ \
 					log \
-					os
+					os\
+					include
 COMPONENT_SRCDIRS += ./ \
 					log \
-					os
+					os\
+					include
+
+CFLAGS += -DLWIP_NET
